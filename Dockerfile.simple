@@ -1,0 +1,42 @@
+# Минимальная версия для проверки сети
+FROM ubuntu:22.04
+
+# Устанавливаем переменные окружения
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LC_ALL=C.UTF-8
+ENV LANG=C.UTF-8
+
+# Пытаемся обновить репозитории с оригинальными настройками
+RUN apt-get update || \
+    (echo "Проблемы с оригинальными репозиториями, переключаемся на российские..." && \
+     echo "deb http://mirror.yandex.ru/ubuntu/ jammy main restricted universe multiverse" > /etc/apt/sources.list && \
+     echo "deb http://mirror.yandex.ru/ubuntu/ jammy-updates main restricted universe multiverse" >> /etc/apt/sources.list && \
+     echo "deb http://mirror.yandex.ru/ubuntu/ jammy-backports main restricted universe multiverse" >> /etc/apt/sources.list && \
+     echo "deb http://mirror.yandex.ru/ubuntu/ jammy-security main restricted universe multiverse" >> /etc/apt/sources.list && \
+     apt-get update)
+
+# Устанавливаем только необходимое для начала
+RUN apt-get install -y \
+    wget \
+    curl \
+    ca-certificates
+
+# Загружаем AppImage инструменты
+RUN wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O /usr/local/bin/appimagetool && \
+    chmod +x /usr/local/bin/appimagetool
+
+# Устанавливаем остальные пакеты
+RUN apt-get install -y \
+    git \
+    build-essential \
+    file \
+    fuse \
+    libfuse2 \
+    squashfs-tools \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+COPY build_appimages.sh /usr/local/bin/build_appimages.sh
+RUN chmod +x /usr/local/bin/build_appimages.sh
+
+ENTRYPOINT ["/usr/local/bin/build_appimages.sh"]

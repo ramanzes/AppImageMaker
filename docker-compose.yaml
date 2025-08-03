@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  appimage-builder:
+    build: .
+    container_name: appimage-builder
+    volumes:
+      # Монтируем текущую директорию
+      - ./:/workspace
+      # Кэш для пакетов (ускоряет повторные сборки)
+      - appimage-cache:/var/cache/apt
+      - appimage-lib:/var/lib/apt
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+      - LC_ALL=C.UTF-8
+      - LANG=C.UTF-8
+    # DNS серверы для решения проблем с подключением
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+      - 1.1.1.1
+    # Привилегированный режим для fuse
+    privileged: true
+    # Рабочая директория внутри контейнера
+    working_dir: /workspace
+    # Настройки сети
+    network_mode: bridge
+
+volumes:
+  appimage-cache:
+  appimage-lib:
