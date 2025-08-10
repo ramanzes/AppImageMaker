@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE KrusaderLayout>
+<KrusaderLayout version="1.0">
+
+    <layout name="krusader:default" type="vertical">
+        <hide_widget name="freeSpace"/>
+        <layout type="horizontal">
+            <frame type="horizontal" color="Statusbar" shape="Box" shadow="Raised">
+                <widget name="mediaButton"/>
+                <widget name="status"/>
+            </frame>
+        </layout>
+        <layout type="horizontal">
+            <widget name="urlNavigator"/>
+            <widget name="toolbar"/>
+            <widget name="backButton"/>
+            <widget name="forwardButton"/>
+            <widget name="historyButton"/>
+            <widget name="bookmarksButton"/>
+        </layout>
+        <widget name="fileSystemError"/>
+        <widget name="clientArea"/>
+        <layout type="horizontal">
+            <frame type="horizontal" color="Statusbar" shape="Box" shadow="Raised">
+                <widget name="totals"/>
+                <widget name="quickSizeCalcProgress"/>
+                <widget name="cancelQuickSizeCalcButton"/>
+                <widget name="previewProgress"/>
+                <widget name="cancelProgressButton"/>
+                <widget name="sidebarPositionButton"/>
+                <widget name="sidebarButton"/>
+            </frame>
+        </layout>
+    </layout>
+
+    <layout name="krusader:compact" type="vertical">
+        <hide_widget name="status"/>
+        <layout type="horizontal">
+            <frame type="horizontal" color="Statusbar" shape="Box" shadow="Raised">
+                <widget name="mediaButton"/>
+                <widget name="urlNavigator"/>
+                <widget name="toolbar"/>
+                <widget name="backButton"/>
+                <widget name="forwardButton"/>
+                <widget name="historyButton"/>
+                <widget name="bookmarksButton"/>
+            </frame>
+        </layout>
+        <widget name="fileSystemError"/>
+        <widget name="clientArea"/>
+        <layout type="horizontal">
+            <frame type="horizontal" color="Statusbar" shape="Box" shadow="Raised">
+                <widget name="totals"/>
+                <widget name="freeSpace"/>
+                <widget name="quickSizeCalcProgress"/>
+                <widget name="cancelQuickSizeCalcButton"/>
+                <widget name="previewProgress"/>
+                <widget name="cancelProgressButton"/>
+                <widget name="sidebarPositionButton"/>
+                <widget name="sidebarButton"/>
+            </frame>
+        </layout>
+    </layout>
+
+    <layout name="krusader:classic" type="vertical">
+        <hide_widget name="freeSpace"/>
+        <layout type="horizontal">
+            <widget name="urlNavigator"/>
+            <widget name="toolbar"/>
+        </layout>
+        <layout type="horizontal">
+            <widget name="mediaButton"/>
+            <frame type="horizontal" color="Statusbar" shape="Box" shadow="Raised">
+                <widget name="status"/>
+            </frame>
+            <widget name="backButton"/>
+            <widget name="forwardButton"/>
+            <widget name="historyButton"/>
+            <widget name="bookmarksButton"/>
+        </layout>
+        <widget name="fileSystemError"/>
+        <widget name="clientArea"/>
+        <layout type="horizontal">
+            <frame type="horizontal" color="Statusbar" shape="Box" shadow="Raised">
+                <widget name="totals"/>
+            </frame>
+            <widget name="quickSizeCalcProgress"/>
+            <widget name="cancelQuickSizeCalcButton"/>
+            <widget name="previewProgress"/>
+            <widget name="cancelPreviewButton"/>
+            <widget name="sidebarPositionButton"/>
+            <widget name="sidebarButton"/>
+        </layout>
+    </layout>
+
+</KrusaderLayout>

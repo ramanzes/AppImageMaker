@@ -19,6 +19,7 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 # Директории
 TODO_FILE="/workspace/todo"
 OUTPUT_DIR="/workspace/itdid"
+WORKSPACE="/workspace"
 WORK_DIR="/tmp/appimage_build"
 
 # Создаем выходную директорию
@@ -81,14 +82,19 @@ get_dependencies() {
     mkdir -p "$lib_dir"
     
     # Получаем список зависимостей
-    local deps=$(ldd "$binary" 2>/dev/null | grep "=> /" | awk '{print $3}' | grep -v "^/lib64" | grep -v "^/lib/x86_64" | sort -u)
-    
+    # local deps=$(ldd "$binary" 2>/dev/null | grep "=> /" | awk '{print $3}' | grep -v "^/lib64" | grep -v "^/lib/x86_64" | sort -u)
+   
+    # Получаем список зависимостей без агрессивной фильтрации
+    local deps=$(ldd "$binary" 2>/dev/null | grep "=>" | awk '{print $3}' | sort -u) 
+
     for lib in $deps; do
         if [[ -f "$lib" ]]; then
             local lib_name=$(basename "$lib")
             if [[ ! -f "$lib_dir/$lib_name" ]]; then
-                cp "$lib" "$lib_dir/" 2>/dev/null || true
+                cp -L "$lib" "$lib_dir/" 2>/dev/null || true
                 log_info "  📚 Скопирована библиотека: $lib_name"
+                # Рекурсивно собираем зависимости для каждой библиотеки
+                get_dependencies "$lib" "$lib_dir"
             fi
         fi
     done
@@ -298,6 +304,37 @@ EOF
     log_success "✅ AppRun скрипт создан"
 }
 
+
+# Проверка структуры AppDir
+check_appdir_structure() {
+    local app_dir="$1"
+    local app_name="$2"
+
+    log_info "🔎 Проверка структуры AppDir для $app_name"
+    local required_files=(
+        "AppRun"
+        "${app_name}.desktop"
+        "${app_name}.png"
+        "usr/bin/$app_name"
+    )
+
+    for file in "${required_files[@]}"; do
+        if [[ ! -f "$app_dir/$file" && ! -x "$app_dir/$file" ]]; then
+            log_error "Отсутствует файл: $file"
+            return 1
+        fi
+    done
+
+    # Проверка наличия библиотек
+    if [[ -z "$(ls -A "$app_dir/usr/lib")" ]]; then
+        log_warning "Директория usr/lib пуста, возможно, не скопированы зависимости"
+    fi
+
+    log_success "✅ Структура AppDir корректна"
+}
+
+
+
 # Функция для создания AppImage
 build_appimage() {
     local app_name="$1"
@@ -350,7 +387,17 @@ build_appimage() {
     # Копируем исполняемый файл
     cp "$executable" "$app_dir/usr/bin/"
     log_info "📁 Скопирован исполняемый файл"
-    
+   # Копируем дополнительные ресурсы для Qt и GTK
+if [[ -d /usr/lib/x86_64-linux-gnu/qt5/plugins ]]; then
+    mkdir -p "$app_dir/usr/lib/qt5/plugins"
+    cp -r /usr/lib/x86_64-linux-gnu/qt5/plugins/* "$app_dir/usr/lib/qt5/plugins/" 2>/dev/null || true
+    log_info "📦 Скопированы Qt плагины"
+fi
+if [[ -d /usr/lib/x86_64-linux-gnu/gtk-3.0 ]]; then
+    mkdir -p "$app_dir/usr/lib/gtk-3.0"
+    cp -r /usr/lib/x86_64-linux-gnu/gtk-3.0/* "$app_dir/usr/lib/gtk-3.0/" 2>/dev/null || true
+    log_info "📦 Скопированы GTK модули"
+fi 
     # Собираем зависимости
     get_dependencies "$executable" "$app_dir/usr/lib"
     
@@ -393,31 +440,89 @@ build_appimage() {
     
     # Устанавливаем переменные окружения для appimagetool
     export APPIMAGE_EXTRACT_AND_RUN=1
-    
-    # Запускаем appimagetool с более подробным выводом
-    if appimagetool --verbose --no-appstream "$app_dir" "${app_name}.AppImage"; then
-        # Проверяем, что файл действительно создался
-        if [[ -f "${app_name}.AppImage" ]]; then
-            # Перемещаем готовый AppImage в выходную директорию
-            mv "${app_name}.AppImage" "$OUTPUT_DIR/"
-            log_success "✅ AppImage для $app_name создан успешно!"
-            
-            # Показываем информацию о файле
-            local size=$(du -h "$OUTPUT_DIR/${app_name}.AppImage" 2>/dev/null | cut -f1)
-            log_info "📊 Размер: $size"
-            
-            # Делаем файл исполняемым
-            chmod +x "$OUTPUT_DIR/${app_name}.AppImage"
-            
-            return 0
-        else
-            log_error "❌ AppImage файл не был создан"
-            return 1
-        fi
-    else
-        log_error "❌ Ошибка при создании AppImage для $app_name"
-        return 1
-    fi
+   
+
+
+
+check_appdir_structure "$app_dir" "$app_name" || return 1
+
+# Установка linuxdeploy
+wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+chmod +x linuxdeploy-x86_64.AppImage
+
+# Ищем .desktop файл
+desktop_path=$(find "$app_dir/usr/share/applications" /usr/share/applications \
+    -type f -name "${app_name}.desktop" 2>/dev/null | head -n 1)
+
+if [[ -z "$desktop_path" ]]; then
+    log_warn "⚠️ .desktop файл для $app_name не найден, создаём заглушку"
+    mkdir -p "$app_dir/usr/share/applications"
+    desktop_path="$app_dir/usr/share/applications/${app_name}.desktop"
+    cat > "$desktop_path" <<EOF
+[Desktop Entry]
+Name=${app_name}
+Exec=${app_name}
+Icon=${app_name}
+Type=Application
+Categories=Utility;
+EOF
+fi
+
+# Ищем иконку
+icon_path=$(find "$app_dir/usr/share/icons" /usr/share/icons \
+    -type f \( -name "${app_name}.png" -o -name "${app_name}.svg" -o -name "${app_name}.xpm" \) 2>/dev/null | head -n 1)
+
+if [[ -z "$icon_path" ]]; then
+    log_warn "⚠️ Иконка для $app_name не найдена, сборка будет без неё"
+        mkdir -p "$app_dir/usr/share/icons/hicolor/256x256/apps"
+    cp "/workspace/pic/PicForAll.png" "$app_dir/usr/share/icons/hicolor/256x256/apps/${app_name}.png"
+    icon_path="$app_dir/usr/share/icons/hicolor/256x256/apps/${app_name}.png"
+
+else
+    log_info "🖼 Найдена иконка: $icon_path"
+fi
+
+    icon_args=(-i "$icon_path")
+
+
+# Создание AppImage с linuxdeploy
+./linuxdeploy-x86_64.AppImage \
+    --appdir "$app_dir" \
+    -d "$desktop_path" \
+    "${icon_args[@]}" \
+    --output appimage
+
+# Перемещаем только сгенерированный файл приложения
+mv "${app_name}"*-x86_64.AppImage "$OUTPUT_DIR/${app_name}.AppImage"
+
+
+
+
+
+    # # Запускаем appimagetool с более подробным выводом
+    # if appimagetool --verbose --no-appstream "$app_dir" "${app_name}.AppImage"; then
+    #     # Проверяем, что файл действительно создался
+    #     if [[ -f "${app_name}.AppImage" ]]; then
+    #         # Перемещаем готовый AppImage в выходную директорию
+    #         mv "${app_name}.AppImage" "$OUTPUT_DIR/"
+    #         log_success "✅ AppImage для $app_name создан успешно!"
+    #         
+    #         # Показываем информацию о файле
+    #         local size=$(du -h "$OUTPUT_DIR/${app_name}.AppImage" 2>/dev/null | cut -f1)
+    #         log_info "📊 Размер: $size"
+    #         
+    #         # Делаем файл исполняемым
+    #         chmod +x "$OUTPUT_DIR/${app_name}.AppImage"
+    #         
+    #         return 0
+    #     else
+    #         log_error "❌ AppImage файл не был создан"
+    #         return 1
+    #     fi
+    # else
+    #     log_error "❌ Ошибка при создании AppImage для $app_name"
+    #     return 1
+    # fi
 }
 
 # Основная логика

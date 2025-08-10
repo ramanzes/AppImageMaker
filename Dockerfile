@@ -1,5 +1,5 @@
 # AppImage builder Container
-FROM ubuntu:22.04
+FROM ubuntu:18.04
 
 # Устанавливаем переменные окружения
 ENV DEBIAN_FRONTEND=noninteractive
