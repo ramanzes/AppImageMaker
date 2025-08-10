@@ -1,6 +1,0 @@
-[MIME Cache]
-x-scheme-handler/geo=google-maps-geo-handler.desktop;openstreetmap-geo-handler.desktop;qwant-maps-geo-handler.desktop;wheelmap-geo-handler.desktop;
-x-scheme-handler/rlogin=ktelnetservice5.desktop;
-x-scheme-handler/ssh=ktelnetservice5.desktop;
-x-scheme-handler/systemsettings=org.kde.plasma.settings.open.desktop;
-x-scheme-handler/telnet=ktelnetservice5.desktop;
